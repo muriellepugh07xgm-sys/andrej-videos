@@ -1,0 +1,1385 @@
+version: 2.1
+
+jobs:
+  postbuild_Run_Pipeline3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: skip
+          command: |
+            mkdir -p /tmp/workspace
+            set +o pipefail 2>/dev/null; seq 1 1322924 | sha256sum > /tmp/workspace/metrics.tsv; true
+            size=$(wc -c </tmp/workspace/metrics.tsv); echo "stage ok: Run_Pipeline3 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - metrics.tsv
+  Run_Pipeline3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Restore vendored sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  bake_CORE-801:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: polka hop
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; tar -czf - /etc/hostname 2>/dev/null | wc -c; true ; } > /tmp/workspace/2023-03-13.data
+            size=$(wc -c </tmp/workspace/2023-03-13.data); echo "stage ok: CORE-801 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 2023-03-13.data
+  CORE-801:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Fetch fixtures
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  fetch_ensure-production-integration-tests:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: dip
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(y=2000;y<=2024;y++){if(y%4==0&&y%100!=0||y%400==0)c++} print c}'; true ; } > /tmp/workspace/stage.blob
+            size=$(wc -c </tmp/workspace/stage.blob); echo "stage ok: ensure-production-integration-tests size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stage.blob
+  ensure-production-integration-tests:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/stage.blob > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Sync asset bundles
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  runner_vb-2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: variation
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; date -d "7 days ago" +%F 2>/dev/null || date +%F; true ; } > /tmp/workspace/375.data
+            size=$(wc -c </tmp/workspace/375.data); echo "stage ok: vb-2 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 375.data
+  vb-2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack toolkit
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  package_v8-ga:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: viking press
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{p=1;for(i=1;i<=1393100;i++)p=(p*i)%1000000007;print p}'; true ; } > /tmp/workspace/package.bin
+            size=$(wc -c </tmp/workspace/package.bin); echo "stage ok: v8-ga size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - package.bin
+  v8-ga:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Hydrate workspace
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  install_run-partial-artifact-bundle:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: needle fine
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; free 2>/dev/null | head -2 | md5sum || echo free-missing; true ; } > /tmp/workspace/big_step_output.txt
+            size=$(wc -c </tmp/workspace/big_step_output.txt); echo "stage ok: run-partial-artifact-bundle size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - big_step_output.txt
+  run-partial-artifact-bundle:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Extract sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  blue_lima:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: foghorn
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 25 | awk '{print int($1/4), $1%4}' | sort | uniq -c | awk 'NR<=4'; true ; } > /tmp/workspace/2023-12-25.data
+            size=$(wc -c </tmp/workspace/2023-12-25.data); echo "stage ok: lima size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 2023-12-25.data
+  lima:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Restore build cache
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  route_jun25-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: light sprinkle
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 100 | awk '{s+=$1; print s}' | tail -1; true ; } > /tmp/workspace/main_task_output_v1.txt
+            size=$(wc -c </tmp/workspace/main_task_output_v1.txt); echo "stage ok: jun25-release size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - main_task_output_v1.txt
+  jun25-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Pull reference data
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  warmup_nebula-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: reef sail
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 100 1 2>/dev/null | head -3 || seq 1 100 | sort -nr | head -3; true ; } > /tmp/workspace/stage.raw
+            size=$(wc -c </tmp/workspace/stage.raw); echo "stage ok: nebula-rev size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stage.raw
+  nebula-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Stage inputs
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  canary1_release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: seal of approval
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=50; print n*(n+1)/2, n*(n+1)*(2*n+1)/6}'; true ; } > /tmp/workspace/367v2.out
+            size=$(wc -c </tmp/workspace/367v2.out); echo "stage ok: release size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 367v2.out
+  release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  db_v1-alpha1:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pls pass
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=100;for(i=1;i<=n;i++)if(i*i<n)r=i;print r}'; true ; } > /tmp/workspace/stats.jsonl
+            size=$(wc -c </tmp/workspace/stats.jsonl); echo "stage ok: v1-alpha1 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stats.jsonl
+  v1-alpha1:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/stats.jsonl > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Rehydrate tree
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  tap_RunApp:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: polish final
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; grep -c "^processor" /proc/cpuinfo; true ; } > /tmp/workspace/20.data
+            size=$(wc -c </tmp/workspace/20.data); echo "stage ok: RunApp size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 20.data
+  RunApp:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Fetch corpus
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  cook_titan-beta:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: 3am noodle
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; yes "abc" | head -500 | sort | uniq | wc -l; true ; } > /tmp/workspace/secondary_job_output_v4.out
+            size=$(wc -c </tmp/workspace/secondary_job_output_v4.out); echo "stage ok: titan-beta size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - secondary_job_output_v4.out
+  titan-beta:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/secondary_job_output_v4.out > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Checkout vendored deps
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  go_sep1-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: on deck
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; sed 's/\(.\)/\1\1/g' <<<"abc"; true ; } > /tmp/workspace/checkpoint-A.state
+            size=$(wc -c </tmp/workspace/checkpoint-A.state); echo "stage ok: sep1-ship size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - checkpoint-A.state
+  sep1-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/checkpoint-A.state > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Prime workspace
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  kick_p-x:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: step 1
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 14336 | wc -c; true ; } > /tmp/workspace/summary.log
+            size=$(wc -c </tmp/workspace/summary.log); echo "stage ok: p-x size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - summary.log
+  p-x:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/summary.log > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack payload
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  tester_yolo:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: dong
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{m[3]=3; m[7]=7; m[2]=2; for(k in m)print k}' | sort -n; true ; } > /tmp/workspace/final.out
+            size=$(wc -c </tmp/workspace/final.out); echo "stage ok: yolo size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - final.out
+  yolo:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/final.out > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Restore snapshot
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  gamma_omar-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: bob along
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 500 | awk 'BEGIN{min=999999}{if($1>max)max=$1; if($1<min)min=$1}END{print min, max}'; true ; } > /tmp/workspace/event.gz
+            size=$(wc -c </tmp/workspace/event.gz); echo "stage ok: omar-ship size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - event.gz
+  omar-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Fetch sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  compile_dotnet8-cov:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: mini boss
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{s=""; for(i=0;i<40;i++)s=s"-"; print "|" s "|"}'; true ; } > /tmp/workspace/audit.log
+            size=$(wc -c </tmp/workspace/audit.log); echo "stage ok: dotnet8-cov size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - audit.log
+  dotnet8-cov:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unroll archive
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  verify_realease:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: pump up
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "trim me   " | awk '{sub(/[[:space:]]+$/,""); print length($0)}'; true ; } > /tmp/workspace/ckpt-v2.pkl
+            size=$(wc -c </tmp/workspace/ckpt-v2.pkl); echo "stage ok: realease size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - ckpt-v2.pkl
+  realease:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/ckpt-v2.pkl > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Seed workspace
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  bake_bug-2288:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: mach limit
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 1 352615 | awk 'END{print NR}'; true ; } > /tmp/workspace/ckpt-v2.pt
+            size=$(wc -c </tmp/workspace/ckpt-v2.pt); echo "stage ok: bug-2288 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - ckpt-v2.pt
+  bug-2288:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  hydrate_romeo-5:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: flag down
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; seq 2 12508 | factor | wc -l; true ; } > /tmp/workspace/metrics.json
+            size=$(wc -c </tmp/workspace/metrics.json); echo "stage ok: romeo-5 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - metrics.json
+  romeo-5:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.json > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Restore vendored sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  linter_sep28-cleanup:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: beacon off
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "a\nb\nc\nd\ne\n" | nl 2>/dev/null | head -3 || printf "a\nb\nc\nd\ne\n" | awk '{print NR,$0}' | head -3; true ; } > /tmp/workspace/53.log
+            size=$(wc -c </tmp/workspace/53.log); echo "stage ok: sep28-cleanup size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 53.log
+  sep28-cleanup:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/53.log > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Fetch fixtures
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  checker_validate-staging-artifact-bundle:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pause here
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo {0..9}{0..9} | wc -w; true ; } > /tmp/workspace/counts.jsonl
+            size=$(wc -c </tmp/workspace/counts.jsonl); echo "stage ok: validate-staging-artifact-bundle size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - counts.jsonl
+  validate-staging-artifact-bundle:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Sync asset bundles
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  package_beta-v5:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: blue screen
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "hey   you   there" | sed 's/  */ /g' | awk '{print NF}'; true ; } > /tmp/workspace/2023-04-09.data
+            size=$(wc -c </tmp/workspace/2023-04-09.data); echo "stage ok: beta-v5 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 2023-04-09.data
+  beta-v5:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/2023-04-09.data > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack toolkit
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  fixture_europa-v2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: cleared to land
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; cat /etc/hostname | rev; true ; } > /tmp/workspace/log.txt
+            size=$(wc -c </tmp/workspace/log.txt); echo "stage ok: europa-v2 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - log.txt
+  europa-v2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Hydrate workspace
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  tap_Launch_App1:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: headstand
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{n=42; while(n>0){rev = rev (n%10); n=int(n/10)}; print rev}' 2>/dev/null || awk 'BEGIN{print 42}'; true ; } > /tmp/workspace/step-10.txt
+            size=$(wc -c </tmp/workspace/step-10.txt); echo "stage ok: Launch_App1 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - step-10.txt
+  Launch_App1:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Extract sources
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  Alpha_Prepare_Staging3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: depth jump
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; head -c 500 /dev/urandom | tr -dc '[:alpha:]' | head -c 32; true ; } > /tmp/workspace/final.txt
+            size=$(wc -c </tmp/workspace/final.txt); echo "stage ok: Prepare_Staging3 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - final.txt
+  Prepare_Staging3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Restore build cache
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  fixture_WEB-766:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: notify prod
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{seed=42; for(i=0;i<20;i++){seed=(seed*1103515245+12345)%2147483648; print seed}}' | tail -3; true ; } > /tmp/workspace/stats.tsv
+            size=$(wc -c </tmp/workspace/stats.tsv); echo "stage ok: WEB-766 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - stats.tsv
+  WEB-766:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/metrics.tsv > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Pull reference data
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  bootstrap_Build_Image4:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: lint
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; rev <<<"gnikcat"; true ; } > /tmp/workspace/artifact.tar
+            size=$(wc -c </tmp/workspace/artifact.tar); echo "stage ok: Build_Image4 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - artifact.tar
+  Build_Image4:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Stage inputs
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+  cache_green-light-go:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: pianissimo
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; date +"%A"; true ; } > /tmp/workspace/pt-A.pt
+            size=$(wc -c </tmp/workspace/pt-A.pt); echo "stage ok: green-light-go size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - pt-A.pt
+  green-light-go:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Read handoff file
+          command: |
+            { head -n 5 /tmp/workspace/big_step_output.txt > /dev/null; echo "lines ok" ; } || true
+      - run:
+          name: Get source tree
+          command: git clone --depth 5 -q --single-branch --filter=tree:0 --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: cat release.tar.xz | tar xJf -
+      - run:
+          no_output_timeout: 80m
+          command: ./main
+
+  deps_yolo_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: dropped kick
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; date -u +%Y%m%d%H%M%S; true ; } > /tmp/workspace/final.out
+            size=$(wc -c </tmp/workspace/final.out); echo "stage ok: yolo size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - final.out
+  canary1_beta-v5_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: scale run
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=10;i++){s+=1/i} printf "%.4f\n",s}'; true ; } > /tmp/workspace/2023-04-09.data
+            size=$(wc -c </tmp/workspace/2023-04-09.data); echo "stage ok: beta-v5 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 2023-04-09.data
+  bootstrap_sep28-cleanup_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: hollow body
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "127.0.0.1:8080" | awk -F: '{print $2}'; true ; } > /tmp/workspace/53.log
+            size=$(wc -c </tmp/workspace/53.log); echo "stage ok: sep28-cleanup size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - 53.log
+  syncer_realease_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: sidestep
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo "snake_case_text" | tr _ ' '; true ; } > /tmp/workspace/ckpt-v2.pkl
+            size=$(wc -c </tmp/workspace/ckpt-v2.pkl); echo "stage ok: realease size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - ckpt-v2.pkl
+  preflight_p-x_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: grid north
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; printf "%s\n" {aa..zz} 2>/dev/null | head -5 || printf "%s\n" a1 a2 b1 b2; true ; } > /tmp/workspace/summary.log
+            size=$(wc -c </tmp/workspace/summary.log); echo "stage ok: p-x size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - summary.log
+  hydrate_titan-beta_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: blip burst
+          command: |
+            mkdir -p /tmp/workspace
+            { set +o pipefail 2>/dev/null; echo $(( RANDOM + RANDOM )) | md5sum; true ; } > /tmp/workspace/secondary_job_output_v4.out
+            size=$(wc -c </tmp/workspace/secondary_job_output_v4.out); echo "stage ok: titan-beta size=${size}"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - secondary_job_output_v4.out
+workflows:
+  build:
+    jobs:
+      - fetch_ensure-production-integration-tests
+      - ensure-production-integration-tests:
+          requires:
+            - fetch_ensure-production-integration-tests
+      - db_v1-alpha1:
+          requires:
+            - fetch_ensure-production-integration-tests
+      - v1-alpha1:
+          requires:
+            - db_v1-alpha1
+      - hydrate_romeo-5:
+          requires:
+            - db_v1-alpha1
+      - romeo-5:
+          requires:
+            - hydrate_romeo-5
+      - go_sep1-ship:
+          requires:
+            - hydrate_romeo-5
+      - sep1-ship:
+          requires:
+            - go_sep1-ship
+      - install_run-partial-artifact-bundle
+      - route_jun25-release
+      - cache_green-light-go
+      - run-partial-artifact-bundle:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - jun25-release:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - green-light-go:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - europa-v2:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - validate-staging-artifact-bundle:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - Build_Image4:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - nebula-rev:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - RunApp:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - release:
+          requires:
+            - install_run-partial-artifact-bundle
+            - route_jun25-release
+            - cache_green-light-go
+      - tester_yolo
+      - deps_yolo_2:
+          requires:
+            - tester_yolo
+      - yolo:
+          requires:
+            - deps_yolo_2
+      - package_beta-v5:
+          requires:
+            - deps_yolo_2
+      - canary1_beta-v5_2:
+          requires:
+            - package_beta-v5
+      - beta-v5:
+          requires:
+            - canary1_beta-v5_2
+      - linter_sep28-cleanup:
+          requires:
+            - canary1_beta-v5_2
+      - bootstrap_sep28-cleanup_2:
+          requires:
+            - linter_sep28-cleanup
+      - sep28-cleanup:
+          requires:
+            - bootstrap_sep28-cleanup_2
+      - verify_realease:
+          requires:
+            - bootstrap_sep28-cleanup_2
+      - syncer_realease_2:
+          requires:
+            - verify_realease
+      - realease:
+          requires:
+            - syncer_realease_2
+      - kick_p-x:
+          requires:
+            - syncer_realease_2
+      - preflight_p-x_2:
+          requires:
+            - kick_p-x
+      - p-x:
+          requires:
+            - preflight_p-x_2
+      - cook_titan-beta:
+          requires:
+            - preflight_p-x_2
+      - hydrate_titan-beta_2:
+          requires:
+            - cook_titan-beta
+      - titan-beta:
+          requires:
+            - hydrate_titan-beta_2
+      - postbuild_Run_Pipeline3
+      - bake_CORE-801
+      - fixture_WEB-766
+      - Run_Pipeline3:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - CORE-801:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - WEB-766:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - vb-2:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - lima:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - Prepare_Staging3:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - bug-2288:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - v8-ga:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - Launch_App1:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - omar-ship:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
+      - dotnet8-cov:
+          requires:
+            - postbuild_Run_Pipeline3
+            - bake_CORE-801
+            - fixture_WEB-766
